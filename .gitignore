@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.pyc
+
+# VS Code
+.vscode/
+
+# Old project
+projet-base
+*.npy
+*.txt
+
+# Todo
+todo
+*.txt
