@@ -1,19 +1,19 @@
-import src.data_loader as dl
-import src.utils as ut
-import src.solver_models as sm
-import src.checker.instance_checker as ic
-import src.checker.solution_checker as sc
+import data_loader as dl
+import utils as ut
+import solver_models as sm
+import checker.instance_checker as ic
+import checker.solution_checker as sc
 
 def load_data():
     ## data loading
     
-    adj_matrix = dl.load_matrix(r"src\toy_data\matrix.txt")
+    adj_matrix = dl.load_matrix(r"toy_data\matrix.txt")
     check_mat = ic.check_distance_matrix(adj_matrix)
     print(check_mat)
-    orders = dl.load_orders(r"src\toy_data\orders.txt")
+    orders = dl.load_orders(r"toy_data\orders.txt")
     check_orders = ic.check_orders(orders)
     print(check_orders)
-    constraints = dl.load_constraints(r"src\toy_data\constraints.txt")
+    constraints = dl.load_constraints(r"toy_data\constraints.txt")
     check_constraints = ic.check_constraints(constraints)
     print(check_constraints)
     
