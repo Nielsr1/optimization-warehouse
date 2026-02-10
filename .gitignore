@@ -4,12 +4,3 @@ __pycache__/
 
 # VS Code
 .vscode/
-
-# Old project
-projet-base
-*.npy
-*.txt
-
-# Todo
-todo
-*.txt

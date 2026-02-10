@@ -1,6 +1,71 @@
 import pulp as pl
 from typing import List, Dict, Set
 
+def model_batching(data) -> Dict:
+    vol = data["vol"]
+
+    nb_orders = data["nb_orders"]
+
+    max_pickers = data["max_pickers"]
+    max_nb_orders = data["max_nb_orders"]
+    max_vol = data["max_vol"]
+
+    a = data["common_locations"]
+
+    # maximization problem creation
+    model = pl.LpProblem("model_batching", pl.LpMaximize)
+
+    ## Variables
+
+    # decison variable that is equal to 1 if the picker p handles the order o
+    y = pl.LpVariable.dicts("y", [(p,o) for p in range(max_pickers) for o in range(nb_orders)], cat="Binary")
+
+    # Decision variable equal to the product of y_pc and y_pc'
+    z = pl.LpVariable.dicts("z", [(p,o,o2) for p in range(max_pickers) for o in range(nb_orders) for o2 in range(nb_orders) if o<o2], lowBound=0, cat="Binary")
+
+    ## Objective function
+    model += sum(z[p,o,o2] * a[o,o2] for p in range(max_pickers) for o in range(nb_orders) for o2 in range(nb_orders) if o<o2)
+
+    ## Constraints
+
+    # a minimum of nb_orders must be done
+    model += sum(y[p,o] for p in range(max_pickers) for o in range(nb_orders)) >= nb_orders
+
+    # An order can only be done once
+    for o in range(nb_orders):
+        model += sum(y[p,o] for p in range(max_pickers)) == 1
+
+    # A picker can't do more than max_nb_ord
+    for p in range(max_pickers):
+        model += sum(y[p,o] for o in range(nb_orders)) <= max_nb_orders
+
+    # A picker can't carry more than max_vol
+    for p in range(max_pickers):
+        model += sum(y[p,o] * vol[o] for o in range(nb_orders)) <= max_vol
+
+    # z[p, o, o2] is the product between y[p, o] and y[p, o2]
+    for p in range(max_pickers):
+        for o in range(nb_orders):
+            for o2 in range(o+1, nb_orders):
+                model += z[p,o,o2] <= y[p,o]
+                model += z[p,o,o2] <= y[p,o2]
+                model += z[p,o,o2] >= y[p,o] + y[p,o2] - 1
+    
+    status = model.solve()
+    print("Solver status:", pl.LpStatus[status])
+
+    solution = {}
+    for p in range(max_pickers):
+        for o in range(nb_orders):
+            solution[p,o] = y[p,o].varValue or 0
+
+    batches = {
+        p : [o for o in range(nb_orders) if (solution[p,o] or 0) > 0.5]
+        for p in range(max_pickers)
+    }
+
+    return batches
+
 def model_picking(data):
     adj_matrix = data["adj_matrix"]
 
@@ -87,69 +152,3 @@ def model_picking(data):
 }
 
     return travel, u_values
-
-
-def model_batching(data) -> Dict:
-    vol = data["vol"]
-
-    nb_orders = data["nb_orders"]
-
-    max_pickers = data["max_pickers"]
-    max_nb_orders = data["max_nb_orders"]
-    max_vol = data["max_vol"]
-
-    a = data["common_locations"]
-
-    # maximization problem creation
-    model = pl.LpProblem("model_batching", pl.LpMaximize)
-
-    ## Variables
-
-    # decison variable that is equal to 1 if the picker p handles the order o
-    y = pl.LpVariable.dicts("y", [(p,o) for p in range(max_pickers) for o in range(nb_orders)], cat="Binary")
-
-    # Decision variable equal to the product of y_pc and y_pc'
-    z = pl.LpVariable.dicts("z", [(p,o,o2) for p in range(max_pickers) for o in range(nb_orders) for o2 in range(nb_orders) if o<o2], lowBound=0, cat="Binary")
-
-    ## Objective function
-    model += sum(z[p,o,o2] * a[o,o2] for p in range(max_pickers) for o in range(nb_orders) for o2 in range(nb_orders) if o<o2)
-
-    ## Constraints
-
-    # a minimum of nb_orders must be done
-    model += sum(y[p,o] for p in range(max_pickers) for o in range(nb_orders)) >= nb_orders
-
-    # An order can only be done once
-    for o in range(nb_orders):
-        model += sum(y[p,o] for p in range(max_pickers)) == 1
-
-    # A picker can't do more than max_nb_ord
-    for p in range(max_pickers):
-        model += sum(y[p,o] for o in range(nb_orders)) <= max_nb_orders
-
-    # A picker can't carry more than max_vol
-    for p in range(max_pickers):
-        model += sum(y[p,o] * vol[o] for o in range(nb_orders)) <= max_vol
-
-    # z[p, o, o2] is the product between y[p, o] and y[p, o2]
-    for p in range(max_pickers):
-        for o in range(nb_orders):
-            for o2 in range(o+1, nb_orders):
-                model += z[p,o,o2] <= y[p,o]
-                model += z[p,o,o2] <= y[p,o2]
-                model += z[p,o,o2] >= y[p,o] + y[p,o2] - 1
-    
-    status = model.solve()
-    print("Solver status:", pl.LpStatus[status])
-
-    solution = {}
-    for p in range(max_pickers):
-        for o in range(nb_orders):
-            solution[p,o] = y[p,o].varValue or 0
-
-    batches = {
-        p : [o for o in range(nb_orders) if (solution[p,o] or 0) > 0.5]
-        for p in range(max_pickers)
-    }
-
-    return batches
