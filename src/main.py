@@ -1,32 +1,53 @@
+import logging
+import os
+import numpy as np
+from typing import Dict, Any, Tuple
+
 import data_loader as dl
 import utils as ut
 import solver_models as sm
 import checker.instance_checker as ic
 import checker.solution_checker as sc
 
-def load_data():
-    ## data loading
+# -----------------------------------------------------------------------------
+# Logging Configuration
+# -----------------------------------------------------------------------------
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s"
+)
+
+logger = logging.getLogger(__name__)
+
+# -----------------------------------------------------------------------------
+# Data Loading
+# -----------------------------------------------------------------------------
+
+def load_data(adj_matrix_path: str, orders_path: str, constraints_path: str) -> Dict[str, Any]:
+    """
+    Load data.
+    """
+
+    logger.info("Loading Data...")
     
-    adj_matrix = dl.load_matrix(r"toy_data\matrix.txt")
+    adj_matrix = dl.load_matrix(adj_matrix_path)
     check_mat = ic.check_distance_matrix(adj_matrix)
-    print(check_mat)
-    orders = dl.load_orders(r"toy_data\orders.txt")
+    logger.debug("Check matrix %s: %s", adj_matrix_path, check_mat)
+    if not check_mat[0]:
+        logger.critical("Distance matrix %s is INVALID. Errors: %s", adj_matrix_path, check_mat[1])
+
+    orders = dl.load_orders(orders_path)
     check_orders = ic.check_orders(orders)
-    print(check_orders)
-    constraints = dl.load_constraints(r"toy_data\constraints.txt")
+    logger.debug("Check orders %s: %s", orders_path, check_orders)
+    if not check_orders[0]:
+        logger.critical("Orders %s are INVALID. Errors: %s", orders_path, check_orders[1])
+
+    constraints = dl.load_constraints(constraints_path)
     check_constraints = ic.check_constraints(constraints)
-    print(check_constraints)
-    
-    ### big instance 
-    # adj_matrix = dl.load_matrix(r"projet-base\Projet_pro-main\data\real_warehouse_data\warehouse_A\adjacencyMatrix.txt")
-    # check_mat = ic.check_distance_matrix(adj_matrix)
-    # print(check_mat)
-    # orders = dl.load_orders(r"projet-base\Projet_pro-main\data\real_warehouse_data\warehouse_A\data_2023-05-22\supportList.txt")
-    # check_orders = ic.check_orders(orders)
-    # print(check_orders)
-    # constraints = dl.load_constraints(r"projet-base\Projet_pro-main\data\real_warehouse_data\warehouse_A\data_2023-05-22\constraints.txt")
-    # check_constraints = ic.check_constraints(constraints)
-    # print(check_constraints)
+    logger.debug("Check constraints %s: %s", constraints_path, check_constraints)
+    if not check_constraints[0]:
+        logger.critical("Constraints %s are INVALID. Erros: %s", constraints_path, check_constraints[1])
 
     # nb of locations and nb of orders
     nb_locations, nb_orders = ut.get_locations_and_orders_counts(adj_matrix, orders)
@@ -37,19 +58,13 @@ def load_data():
     # volume of the orders
     vol = [orders[number]["volume"] for number in range(nb_orders)]
 
-    print("vol done")
-
     # lower and upper bound for the number of pickers
     lower_bound, upper_bound = ut.max_pickers_bounds(orders, nb_orders, max_nb_orders, max_vol, vol)
     min_pickers = lower_bound
     max_pickers = upper_bound
 
-    print("bounds done")
-
     # binary data which takes 1 if the location is part of the order and 0 otherwise
     ifloc = ut.if_loc_in_order(nb_locations, orders)
-
-    print("ifloc done")
 
     # Vector containing the number of locations shared by each pair of orders
     common_locations = ut.common_elements(ifloc, nb_orders, nb_locations)
@@ -87,8 +102,12 @@ def test_batching(data):
     return batches, locations_pickers
 
 def main():
-    data = load_data()
-    print("load data done")
+    BASE_DIR = os.path.dirname(__file__)
+    matrix_path = os.path.join(BASE_DIR, "toy_data", "matrix.txt")
+    orders_path = os.path.join(BASE_DIR, "toy_data", "orders.txt")
+    constraints_path = os.path.join(BASE_DIR, "toy_data", "constraints.txt")
+
+    data = load_data(matrix_path, orders_path, constraints_path)
     tests = {
         "picking": test_picking,
         "batching" : test_batching

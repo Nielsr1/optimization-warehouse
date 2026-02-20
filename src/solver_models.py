@@ -20,8 +20,8 @@ def model_batching(data) -> Dict:
     # decison variable that is equal to 1 if the picker p handles the order o
     y = pl.LpVariable.dicts("y", [(p,o) for p in range(max_pickers) for o in range(nb_orders)], cat="Binary")
 
-    # Decision variable equal to the product of y_pc and y_pc'
-    z = pl.LpVariable.dicts("z", [(p,o,o2) for p in range(max_pickers) for o in range(nb_orders) for o2 in range(nb_orders) if o<o2], lowBound=0, cat="Binary")
+    # Decision variable equal to the product of y_po and y_po'
+    z = pl.LpVariable.dicts("z", [(p,o,o2) for p in range(max_pickers) for o in range(nb_orders) for o2 in range(nb_orders) if o<o2], cat="Binary")
 
     ## Objective function
     model += sum(z[p,o,o2] * a[o,o2] for p in range(max_pickers) for o in range(nb_orders) for o2 in range(nb_orders) if o<o2)
